@@ -161,8 +161,8 @@
     }
 
     function handleActiveCellChange(e, data) {
-      if (_options.selectActiveRow && data.row != null) {
-        setSelectedRanges([new Slick.Range(data.row, 0, data.row, _grid.getColumns().length - 1)]);
+      if (_options.selectActiveRow && data.activeCell.row != null) {
+        setSelectedRanges([new Slick.Range(data.activeCell.row, 0, data.activeCell.row, _grid.getColumns().length - 1)]);
       }
     }
 
