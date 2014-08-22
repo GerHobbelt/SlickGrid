@@ -16,6 +16,7 @@
       columnId: "_checkbox_selector",
       columnName: "checkbox",
       cssClass: null,
+      headerCssClass: null,
       selectable: true,
       toolTip: "Select/Deselect All",
       field: "sel",
@@ -172,6 +173,7 @@
         nofilter: true,
         hideable: false,
         cssClass: _options.cssClass,
+        headerCssClass: _options.headerCssClass,
         selectable: _options.selectable,
         formatter: checkboxSelectionFormatter,
         headerFormatter: checkboxSelectionHeaderFormatter
