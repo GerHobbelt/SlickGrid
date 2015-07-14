@@ -1,30 +1,25 @@
-## This is the 6pac slickgrid repo
+## This is the manju_reddys slickgrid repo
 
-I am maintaining this branch as a separate 'alternative master'. Check [my wiki](https://github.com/6pac/SlickGrid/wiki) for details.
+I have forked this from 6pac to fix the [issue](https://github.com/6pac/SlickGrid/issues/11). The 6pac closed the issue without proper solution. 
 
-Original mleibman README follows:
+
+I will maintain this branch and add more features as I come up with new requirements and implement them. 
+
+Find documentation and examples in [the wiki](https://github.com/mleibman/SlickGrid/wiki) (Original author mleibman).
 
 --------------------------------------------------------------------------------------------------------------------
 
-Find documentation and examples in [the wiki](https://github.com/mleibman/SlickGrid/wiki).
+## Changes made in this branch
 
-# Welcome to SlickGrid
+* Moved the CSS files to 'css' folder (consistence with STDs).
+* Added column option `"preventClearOnEdit"` to prevent the cell content to be cleared on click ( for edit).
 
-## SlickGrid is an advanced JavaScript grid/spreadsheet component
 
-Some highlights:
+## Roadmap
 
-* Adaptive virtual scrolling (handle hundreds of thousands of rows with extreme responsiveness)
-* Extremely fast rendering speed
-* Supports jQuery UI Themes
-* Background post-rendering for richer cells
-* Configurable & customizable
-* Full keyboard navigation
-* Column resize/reorder/show/hide
-* Column autosizing & force-fit
-* Pluggable cell formatters & editors
-* Support for editing and creating new rows.
-* Grouping, filtering, custom aggregators, and more!
-* Advanced detached & multi-field editors with undo/redo support.
-* “GlobalEditorLock” to manage concurrent edits in cases where multiple Views on a page can edit the same data.
-* Support for [millions of rows](http://stackoverflow.com/a/2569488/1269037)
+* Add more features (nothing in my mind for now except adding few additional editors).
+* Add support for less.
+
+
+## License
+Original license [MIT](https://github.com/mleibman/SlickGrid/blob/master/MIT-LICENSE.txt)

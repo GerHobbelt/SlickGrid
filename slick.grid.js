@@ -2372,40 +2372,40 @@ if (typeof Slick === "undefined") {
             }
             cancelEditAndSetFocus();
           } else if (e.which == 34) {
-            navigatePageDown();
+            navigatePageDown(e);
             handled = true;           
           } else if (e.which == 33) {
-            navigatePageUp();
+            navigatePageUp(e);
             handled = true;
           } else if (e.which == 37) {
-            handled = navigateLeft();
+            handled = navigateLeft(e);
           } else if (e.which == 39) {
-            handled = navigateRight();
+            handled = navigateRight(e);
           } else if (e.which == 38) {
-            handled = navigateUp();
+            handled = navigateUp(e);
           } else if (e.which == 40) {
-            handled = navigateDown();
+            handled = navigateDown(e);
           } else if (e.which == 9) {
-            handled = navigateNext();
+            handled = navigateNext(e);
           } else if (e.which == 13) {
             if (options.editable) {
               if (currentEditor) {
                 // adding new row
                 if (activeRow === getDataLength()) {
-                  navigateDown();
+                  navigateDown(e);
                 } else {
                   commitEditAndSetFocus();
                 }
               } else {
                 if (getEditorLock().commitCurrentEdit()) {
-                  makeActiveCellEditable();
+                  makeActiveCellEditable(null, e);
                 }
               }
             }
             handled = true;
           }
         } else if (e.which == 9 && e.shiftKey && !e.ctrlKey && !e.altKey) {
-          handled = navigatePrev();
+          handled = navigatePrev(e);
         }
       }
 
@@ -2446,7 +2446,7 @@ if (typeof Slick === "undefined") {
       if ((activeCell != cell.cell || activeRow != cell.row) && canCellBeActive(cell.row, cell.cell)) {
         if (!getEditorLock().isActive() || getEditorLock().commitCurrentEdit()) {
           scrollRowIntoView(cell.row, false);
-          setActiveCellInternal(getCellNode(cell.row, cell.cell));
+          setActiveCellInternal(getCellNode(cell.row, cell.cell), null, e);
         }
       }
     }
@@ -2477,7 +2477,7 @@ if (typeof Slick === "undefined") {
       }
 
       if (options.editable) {
-        gotoCell(cell.row, cell.cell, true);
+        gotoCell(cell.row, cell.cell, true, e);
       }
     }
 
@@ -2629,7 +2629,7 @@ if (typeof Slick === "undefined") {
       }
     }
 
-    function setActiveCellInternal(newCell, opt_editMode) {
+    function setActiveCellInternal(newCell, opt_editMode, e) {
       if (activeCellNode !== null) {
         makeActiveCellNormal();
         $(activeCellNode).removeClass("active");
@@ -2657,10 +2657,10 @@ if (typeof Slick === "undefined") {
 
           if (options.asyncEditorLoading) {
             h_editorLoader = setTimeout(function () {
-              makeActiveCellEditable();
+              makeActiveCellEditable(null, e);
             }, options.asyncEditorLoadDelay);
           } else {
-            makeActiveCellEditable();
+            makeActiveCellEditable(null, e);
           }
         }
       } else {
@@ -2734,7 +2734,7 @@ if (typeof Slick === "undefined") {
       getEditorLock().deactivate(editController);
     }
 
-    function makeActiveCellEditable(editor) {
+    function makeActiveCellEditable(editor, e) {
       if (!activeCellNode) {
         return;
       }
@@ -2763,7 +2763,7 @@ if (typeof Slick === "undefined") {
 	  var useEditor = editor || getEditor(activeRow, activeCell);
 	  
       // don't clear the cell if a custom editor is passed through
-      if (!editor && !useEditor.suppressClearOnEdit) {
+      if (!editor && !columnDef.preventClearOnEdit) {
         activeCellNode.innerHTML = "";
       }
  
@@ -2776,7 +2776,7 @@ if (typeof Slick === "undefined") {
         item: item || {},
         commitChanges: commitEditAndSetFocus,
         cancelChanges: cancelEditAndSetFocus
-      });
+      }, e);
 
       if (item) {
         currentEditor.loadValue(item);
@@ -3160,35 +3160,35 @@ if (typeof Slick === "undefined") {
       return pos;
     }
 
-    function navigateRight() {
-      return navigate("right");
+    function navigateRight(e) {
+      return navigate("right", e);
     }
 
-    function navigateLeft() {
-      return navigate("left");
+    function navigateLeft(e) {
+      return navigate("left", e);
     }
 
-    function navigateDown() {
-      return navigate("down");
+    function navigateDown(e) {
+      return navigate("down", e);
     }
 
-    function navigateUp() {
-      return navigate("up");
+    function navigateUp(e) {
+      return navigate("up", e);
     }
 
-    function navigateNext() {
-      return navigate("next");
+    function navigateNext(e) {
+      return navigate("next", e);
     }
 
-    function navigatePrev() {
-      return navigate("prev");
+    function navigatePrev(e) {
+      return navigate("prev", e);
     }
 
     /**
      * @param {string} dir Navigation direction.
      * @return {boolean} Whether navigation resulted in a change of active cell.
      */
-    function navigate(dir) {
+    function navigate(dir, e) {
       if (!options.enableCellNavigation) {
         return false;
       }
@@ -3225,11 +3225,11 @@ if (typeof Slick === "undefined") {
       if (pos) {
         var isAddNewRow = (pos.row == getDataLength());
         scrollCellIntoView(pos.row, pos.cell, !isAddNewRow);
-        setActiveCellInternal(getCellNode(pos.row, pos.cell));
+        setActiveCellInternal(getCellNode(pos.row, pos.cell), null, e);
         activePosX = pos.posX;
         return true;
       } else {
-        setActiveCellInternal(getCellNode(activeRow, activeCell));
+        setActiveCellInternal(getCellNode(activeRow, activeCell), null, e);
         return false;
       }
     }
@@ -3296,7 +3296,7 @@ if (typeof Slick === "undefined") {
       return columns[cell].selectable;
     }
 
-    function gotoCell(row, cell, forceEdit) {
+    function gotoCell(row, cell, forceEdit, e) {
       if (!initialized) { return; }
       if (!canCellBeActive(row, cell)) {
         return;
@@ -3311,7 +3311,7 @@ if (typeof Slick === "undefined") {
       var newCell = getCellNode(row, cell);
 
       // if selecting the 'add new' row, start editing right away
-      setActiveCellInternal(newCell, forceEdit || (row === getDataLength()) || options.autoEdit);
+      setActiveCellInternal(newCell, forceEdit || (row === getDataLength()) || options.autoEdit, e);
 
       // if no editor was created, set the focus back on the grid
       if (!currentEditor) {
