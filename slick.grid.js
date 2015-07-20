@@ -2362,32 +2362,33 @@ if (typeof Slick === "undefined") {
 
     function handleKeyDown(e) {
       trigger(self.onKeyDown, {row: activeRow, cell: activeCell}, e);
-      var handled = e.isImmediatePropagationStopped();
+      var handled = e.isImmediatePropagationStopped(),
+          keyCode = Slick.keyCode;
 
       if (!handled) {
         if (!e.shiftKey && !e.altKey && !e.ctrlKey) {
-          if (e.which == 27) {
+          if (e.which == keyCode.ESCAPE) {
             if (!getEditorLock().isActive()) {
               return; // no editing mode to cancel, allow bubbling and default processing (exit without cancelling the event)
             }
             cancelEditAndSetFocus();
-          } else if (e.which == 34) {
+          } else if (e.which == keyCode.PAGEDOWN) {
             navigatePageDown(e);
             handled = true;           
-          } else if (e.which == 33) {
+          } else if (e.which == keyCode.PAGEUP) {
             navigatePageUp(e);
             handled = true;
-          } else if (e.which == 37) {
+          } else if (e.which == keyCode.LEFT) {
             handled = navigateLeft(e);
-          } else if (e.which == 39) {
+          } else if (e.which == keyCode.RIGHT) {
             handled = navigateRight(e);
-          } else if (e.which == 38) {
+          } else if (e.which == keyCode.UP) {
             handled = navigateUp(e);
-          } else if (e.which == 40) {
+          } else if (e.which == keyCode.DOWN) {
             handled = navigateDown(e);
-          } else if (e.which == 9) {
+          } else if (e.which == keyCode.TAB) {
             handled = navigateNext(e);
-          } else if (e.which == 13) {
+          } else if (e.which == keyCode.ENTER) {
             if (options.editable) {
               if (currentEditor) {
                 // adding new row
@@ -2404,7 +2405,7 @@ if (typeof Slick === "undefined") {
             }
             handled = true;
           }
-        } else if (e.which == 9 && e.shiftKey && !e.ctrlKey && !e.altKey) {
+        } else if (e.which == keyCode.TAB && e.shiftKey && !e.ctrlKey && !e.altKey) {
           handled = navigatePrev(e);
         }
       }
@@ -2638,7 +2639,8 @@ if (typeof Slick === "undefined") {
         }
       }
 
-      var activeCellChanged = (activeCellNode !== newCell);
+      var oldCell = activeCellNode,
+          activeCellChanged = (activeCellNode !== newCell);
       activeCellNode = newCell;
 
       if (activeCellNode != null) {
