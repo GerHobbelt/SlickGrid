@@ -1,7 +1,7 @@
 /*!
  * @license
  * slickGrid v2.3.18-alpha.1011 (https://github.com/GerHobbelt/SlickGrid)
- * Copyright 2009-2015 Michael Leibman <michael{dot}leibman{at}gmail{dot}com>
+ * Copyright 2009-2017 Michael Leibman <michael{dot}leibman{at}gmail{dot}com>
  *
  * Distributed under MIT license.
  * All rights reserved.
@@ -30,7 +30,7 @@
         var _inHandler;
         var _selector = new Slick.CellRangeSelector({
             selectionCss: {
-                "border": "2px solid black"
+                border: "2px solid black"
             }
         });
         var _options;
@@ -50,6 +50,7 @@
             _handler.subscribe(_grid.onHeaderClick, wrapHandler(handleOnHeaderClick));
             _handler.subscribe(_selector.onCellRangeSelected, wrapHandler(handleCellRangeSelected));
             _handler.subscribe(_selector.onBeforeCellRangeSelected, wrapHandler(handleBeforeCellRangeSelected));
+            _handler.subscribe(_selector.onCellRangeSelectionOngoing, wrapHandler(handleCellRangeSelectionOngoing));
 
             grid.registerPlugin(_selector);
         }
@@ -93,7 +94,7 @@
             for (i = from; i <= to; i++) {
                 rows.push(i);
             }
-            for (i = to; i < from; i++) {
+            for (i = to; i <= from; i++) {
                 rows.push(i);
             }
             return rows;
@@ -109,16 +110,19 @@
 
         function removeInvalidRanges(ranges) {
             var result = [];
-            for (var i = 0; i < ranges.length; i++) {
-                var r = ranges[i];
-                if (!r.fromCell) {
-                    // we return here if r.fromCell is NaN
-                    // this is the case if we are selecting a row
-                    return ranges;
-                } else {
-                    // we are selecting a cell range
-                    if (_grid.canCellBeSelected(r.fromRow, r.fromCell) && _grid.canCellBeSelected(r.toRow, r.toCell)) {
-                        result.push(r);
+
+            if (ranges) {
+                for (var i = 0; i < ranges.length; i++) {
+                    var r = ranges[i];
+                    if (!r.fromCell) {
+                        // we return here if r.fromCell is NaN
+                        // this is the case if we are selecting a row
+                        return ranges;
+                    } else {
+                        // we are selecting a cell range
+                        if (_grid.canCellBeSelected(r.fromRow, r.fromCell) && _grid.canCellBeSelected(r.toRow, r.toCell)) {
+                            result.push(r);
+                        }
                     }
                 }
             }
@@ -126,6 +130,11 @@
         }
 
         function setSelectedRanges(ranges) {
+            // simple check for: empty selection doesn't change anything from existing empty selection, prevent firing `onSelectedRangesChanged`
+            if ((!_ranges || _ranges.length === 0) && (!ranges || ranges.length === 0)) { 
+                return; 
+            }
+
             _ranges = removeInvalidRanges(ranges);
             _self.onSelectedRangesChanged.notify(_ranges);
         }
@@ -134,6 +143,8 @@
             return _ranges;
         }
 
+        // return FALSE when the drag should NOT start.
+        // args = cell
         function handleBeforeCellRangeSelected(e, args) {
             if (_grid.getEditorLock().isActive()) {
                 e.stopPropagation();
@@ -173,7 +184,7 @@
             if (activeRow && e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey && (e.which == 38 || e.which == 40)) {
                 var selectedRows = getSelectedRows();
                 selectedRows.sort(function (x, y) {
-                    return x - y
+                    return x - y;
                 });
 
                 if (!selectedRows.length) {

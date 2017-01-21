@@ -1,7 +1,7 @@
 /*!
  * @license
  * slickGrid v2.3.18-alpha.1011 (https://github.com/GerHobbelt/SlickGrid)
- * Copyright 2009-2015 Michael Leibman <michael{dot}leibman{at}gmail{dot}com>
+ * Copyright 2009-2017 Michael Leibman <michael{dot}leibman{at}gmail{dot}com>
  *
  * Distributed under MIT license.
  * All rights reserved.
@@ -23,22 +23,70 @@
 
   function CellExternalCopyManager(options) {
     /*
-      This manager enables users to copy/paste data from/to an external Spreadsheet application
-      such as MS-Excel® or OpenOffice-Spreadsheet.
-
-      Since it is not possible to access directly the clipboard in javascript, the plugin uses
-      a trick to do it's job. After detecting the keystroke, we dynamically create a textarea
-      where the browser copies/pastes the serialized data.
-
-      options:
-        copiedCellStyle : sets the css className used for copied cells. default : "copied"
-        copiedCellStyleLayerKey : sets the layer key for setting css values of copied cells. default : "copy-manager"
-        dataItemColumnValueExtractor : option to specify a custom column value extractor function
-        dataItemColumnValueSetter : option to specify a custom column value setter function
-        clipboardCommandHandler : option to specify a custom handler for paste actions
-        includeHeaderWhenCopying : set to true and the plugin will take the name property from each column (which is usually what appears in your header) and put that as the first row of the text that's copied to the clipboard
-        bodyElement: option to specify a custom DOM element which to will be added the hidden textbox. It's useful if the grid is inside a modal dialog.
-    */
+     * This manager enables users to copy/paste data from/to an external Spreadsheet application
+     * such as MS-Excel® or OpenOffice-Spreadsheet.
+     *
+     * Since it is not possible to access directly the clipboard in javascript, the plugin uses
+     * a trick to do it's job. After detecting the keystroke, we dynamically create a textarea
+     * where the browser copies/pastes the serialized data. Then, to prevent browser security
+     * conditions[1] kicking in we very specifically tell the browser that we did **_not_**
+     * handle the keyboard event and then pray that the other keyboard events handlers in your
+     * application do the same[2] so that in the end, after traversing the 
+     * entire keyboard event handler chain in JavaScript, the browser gets to handle 
+     * the copy, cut or paste keypress event natively and thus execute
+     * this action on the new, out-of-view, just now having received focus, TEXTAREA DOM element.
+     *   
+     * Meanwhile, we keep that TEXTAREA alive for a specific, if small, amount of time to 'ensure'
+     * (rather: be pretty certain -- but no guarantees here, ever!) that that DOM element does
+     * receive the pasted content / delivers the copied/cut TSV (Tab Separated Values) formatted 
+     * content via the browser's native keyboard action, while keeping that DOM element only
+     * alive and *focused* for a small amount of time in an attempt to not 'influence/corrupt'
+     * your current (= previous) in-page focus before the next user action will happen.
+     *   
+     *   
+     * [1]: which means that you cannot simulate keypresses and have them execute
+     *      native operations such as clipboard copy, cut or paste; only *real* *user*-initiated
+     *      keypresses can do this *iff* you allow them to propagate into the default = native handler,
+     *      i.e. never call event.preventDefault(), nor event.stopPropagation() nor event.stopImmediatePropagation():
+     *      the latter two are interpreted by jQuery at least (and by the slickgrid event notify wrapper too)
+     *      as 'having completely handled this event' this implying event.preventDefault().
+     *   
+     *      For added fun, do note that jQuery event handling differs in one *very important aspect*
+     *      with the SlickGrid provided event handler wrapper code: jQuery still treats `return false;`
+     *      coming from an event handler as equivalent to to event.preventDefault(), even though they
+     *      currently strongly advise against the practice of `return false;`.
+     *   
+     *      SlickGrid event handling (Event.notify et al) however does not take `return false;` as
+     *      such an equivalence, but merely as another way to act similar to 
+     *      event.stopImmediatePropagation() while producing the return value `false` for the Event.trigger()
+     *      call to return, iff the Event was fired by that API. Of course, in the case of keyboard
+     *      events, SlickGrid does not mind about event handlers returning result values, hence the
+     *      `return false;` you see in this plugin merely serve to terminate Event.trigger() going
+     *      through the registered keyboard handlers, thus creating a 'first come, first served' 
+     *      process where we signal 'done' only to SlickGrid itself while the browser / context remains
+     *      safely unaware of whether we did, or did not, process this particular key event.
+     *   
+     *   
+     * [2]: keyboard events bubble up so we are regrettably fully dependent
+     *      on the entire web page application context to behave 'correctly' in this.
+     *   
+     *   
+     * options:
+     *   
+     * - copiedCellStyle : sets the css className used for copied cells. default : "copied"
+     *         
+     * - copiedCellStyleLayerKey : sets the layer key for setting css values of copied cells. default : "copy-manager"
+     *       
+     * - dataItemColumnValueExtractor : option to specify a custom column value extractor function
+     *       
+     * - dataItemColumnValueSetter : option to specify a custom column value setter function
+     *       
+     * - clipboardCommandHandler : option to specify a custom handler for paste actions
+     *       
+     * - includeHeaderWhenCopying : set to true and the plugin will take the name property from each column (which is usually what appears in your header) and put that as the first row of the text that's copied to the clipboard
+     *       
+     * - bodyElement: option to specify a custom DOM element which to will be added the hidden textbox. It's useful if the grid is inside a modal dialog.
+     */
     var _grid;
     var _self = this;
     var _copiedRanges;    // keeps track of the last marked (Ctrl-C copied) range
@@ -173,13 +221,36 @@
         _externalCopyPastaCatcherElBackup = document.activeElement;
 
         var ta = document.createElement('textarea');
+	
+	// make it a free-for-all text area which checks nothing: we accept arbitrary input:
+	// see also https://developer.mozilla.org/en-US/docs/Web/HTML/Element/textarea#Attributes
+	// Setting all these explicitly ensures that the browser or application itself doesn't 
+	// introduce any 'smart stuff' we don't want in here!
+	ta.spellcheck = false;
+	ta.readOnly = false;
+	ta.disabled = false;
+	ta.autocomplete = 'off';
+	ta.autocapitalize = 'none';
+	ta.wrap = 'soft';
+	
         ta.style.position = 'absolute';
-        ta.style.left = '-1000px';
-        ta.style.top = document.body.scrollTop + 'px';
+        ta.style.left = '-1250px';
+        ta.style.top = (document.body.scrollTop + 150) + 'px';
         ta.className = _copiedCellStyleExternalHelperKey;
+        if (innerText === "") {
+          // make sure there is always something to select
+          innerText = "\t"; 
+        }
         ta.value = innerText;
         _bodyElement.appendChild(ta);
         ta.select(); // .focus();
+        // Some times .select() alone doesn't suffice to focus on the desired element (TEXTAREA) before
+        // we let the browser handle the paste action in the default way -- which is the only way to
+        // get hold of the external(incoming) paste content in a more-or-less controlled fashion.  :-(
+        if (document.activeElement !== ta) {
+          ta.focus();
+          console.warn('SlickGrid ExternalCopyManager: switches focus to PASTE TEXTAREA');
+        }
 
         _externalCopyPastaCatcherEl = ta;
 
@@ -196,6 +267,11 @@
         if (_externalCopyPastaCatcherElBackup && typeof _externalCopyPastaCatcherElBackup.select === 'function') {
           _externalCopyPastaCatcherElBackup.select();
         }
+        if (document.activeElement !== _externalCopyPastaCatcherElBackup && _externalCopyPastaCatcherElBackup && typeof _externalCopyPastaCatcherElBackup.focus === 'function') {
+          _externalCopyPastaCatcherElBackup.focus();
+          console.warn('SlickGrid ExternalCopyManager: switches focus *back* to PASTE original element');
+        }
+        console.warn('SlickGrid ExternalCopyManager: focus returned to original element after paste action (we hope...)');
         _externalCopyPastaCatcherElBackup = null;
         
         _bodyElement.removeChild(_externalCopyPastaCatcherEl);
@@ -351,8 +427,8 @@
           var bRange = {
             fromCell: this.destX,
             fromRow: this.destY,
-            toCell: this.destX + this.destW - 1,
-            toRow: this.destY + this.destH - 1
+            toCell: this.destX + (this.destW ? this.destW - 1 : 0),
+            toRow: this.destY + (this.destH ? this.destH - 1 : 0)
           };
 
           this.markCopySelection([bRange]);
@@ -393,8 +469,8 @@
           var bRange = {
             fromCell: this.destX,
             fromRow: this.destY,
-            toCell: this.destX + this.destW - 1,
-            toRow: this.destY + this.destH - 1
+            toCell: this.destX + (this.destW ? this.destW - 1 : 0),
+            toRow: this.destY + (this.destH ? this.destH - 1 : 0)
           };
 
           this.markCopySelection([bRange]);
@@ -419,10 +495,20 @@
         }
       };
 
-      if (_options.clipboardCommandHandler) {
-        _options.clipboardCommandHandler(clipCommand);
-      } else {
-        clipCommand.execute();
+      // protect ourselves from userland code crashing -- this should be put around all event handlers, unfortunately,
+      // to prevent errors in userland code screwing us up fatally.
+      // 
+      // In this case, it's VERY FATAL as a crash anywhere around here will nuke the brittle equilibrium of 
+      // the copy/paste handling due to the timeout handler not firing anymore at the appropriate time: 
+      // copy/paste will cease to function after a crash!
+      try {
+        if (_options.clipboardCommandHandler) {
+          _options.clipboardCommandHandler(clipCommand);
+        } else {
+          clipCommand.execute();
+        }
+      } catch (ex) {
+        console.warn('SlickGrid ExternalCopyManager: userland crash in copy/paste manager:', ex, ex.stack);
       }
     }
 
@@ -501,8 +587,8 @@
             var clipTextHeaders = [];
             range = ranges[0];
 
-            for (j = range.fromCell; j < range.toCell + 1; j++) {
-                clipTextHeaders.push(columns[j].name || "");
+            for (j = range.fromCell; j <= range.toCell; j++) {
+                clipTextHeaders.push(columns[j].name || '');
             }
             clipTextArr.push(clipTextHeaders.join("\t") + "\r\n");
         }
@@ -510,18 +596,18 @@
         for (var rg = 0; rg < ranges.length; rg++) {
             range = ranges[rg];
             var clipTextRows = [];
-            for (i = range.fromRow; i < range.toRow + 1; i++) {
+            for (i = range.fromRow; i <= range.toRow; i++) {
                 var clipTextCells = [];
                 var dt = _grid.getDataItem(i);
 
-                for (j = range.fromCell; j < range.toCell + 1; j++) {
+                for (j = range.fromCell; j <= range.toCell; j++) {
                     clipTextCells.push(getDataItemValueForColumn(dt, columns[j], clipTextRows.length, clipTextCells.length, i, j));
                 }
                 clipTextRows.push(clipTextCells.join("\t"));
             }
             clipTextArr.push(clipTextRows.join("\r\n"));
         }
-        var clipText = clipTextArr.join("");
+        var clipText = clipTextArr.join('');
         _copyFingerPrint = clipText.replace(/\r/g, "");
 
         if (toClipboard) {
@@ -553,7 +639,39 @@
       //     (note the by now obsoleted FF approach in there; just for completeness listed here: do not even consider this!)
       //
       //   - https://github.com/mojombo/clippy
-      //     (Flash-based solution. Need I say more?)
+      //     (Flash-based solution. (Obsoleted) Need I say more?)
+      //
+      //   - https://github.com/zeroclipboard/zeroclipboard
+      //     (Another Flash-based solution, hich is maintained at least. Nevertheless, many users have Flash blocked and problems abound.)
+      //     
+      //   - https://brooknovak.wordpress.com/2009/07/28/accessing-the-system-clipboard-with-javascript/
+      //   
+      //   - https://www.lucidchart.com/techblog/2014/12/02/definitive-guide-copying-pasting-javascript/
+      //
+      //   - http://stackoverflow.com/questions/17527870/how-does-trello-access-the-users-clipboard
+      //   
+      // Bottom line: you're toast when you don't use the keyboard shortcuts: nobody has a fully working solution for when you don't,
+      // e.g. when you click on a 'copy' or 'paste' button on some toolbar in the UI: you **cannot** fake the keyboard Ctrl+C/V
+      // keyboard events such that they exactly mirror these keypresses done by a user: there are security issues involved which ensure
+      // that browsers will never allow the JavaScript running in a webpage's sandbox to act like a human.
+      //                                 
+      // ---
+      //
+      // Also note that we cannot discern between these two series of user actions and therefor have to assume the worst, which is No.2:
+      //
+      // 1. user action sequence:
+      //    + click on 'copy' button in UI (data gets marked as copied, a fingerprint is constructed, no data on the clipboard)
+      //    + Ctrl-V keyboard sequence to paste
+      //
+      // 2. user action sequence:
+      //    + click on 'copy' button in UI (data gets marked as copied, a fingerprint is constructed, no data on the clipboard)
+      //    + user performs clipboard actions, e.g. Ctrl-C, in an external application: we cannot observe this happening
+      //    + Ctrl-V keyboard sequence to paste (the user will want the data obtained from the external application to enter into ours)
+      //
+      // We can argue all day about which heuristic is 'better'. The bottom line is that clipboard access from a browser is
+      // extremely limited and only anywhere near 'dependable' when the user consistently uses keyboard shortcuts
+      // Ctrl-C/X/V **only**: clicking on copy/cut/paste buttons or any other 'clipboard' UI elements only will work for
+      // internal transfers, such as copying a range of cells from one area to another in the project.
       //
       if (window.clipboardData) {
         // MSIE browser supports clipboard access from JavaScript
@@ -574,6 +692,8 @@
             //$focus.attr('tabIndex', '-1');
             //$focus.focus();
             //$focus.removeAttr('tabIndex');
+	    
+            // IF WE ENABLE THIS setActiveCell, the grid jumps to this upon Ctrl-X or Ctrl-C
             _grid.setActiveCell(activeCell.row, activeCell.cell, {
               forceEditMode: false,
               takeFocus: true
@@ -615,7 +735,7 @@
                           toCell: 1,
                           fromCell: 1
                         };
-          targetRanges = [new Slick.Range(singleTargetCornerCell.row, singleTargetCornerCell.cell, singleTargetCornerCell.row + srcRange.toRow - srcRange.fromRow + 1, singleTargetCornerCell.cell + srcRange.toCell - srcRange.fromCell + 1)];
+          targetRanges = [new Slick.Range(singleTargetCornerCell.row, singleTargetCornerCell.cell, singleTargetCornerCell.row + srcRange.toRow - srcRange.fromRow, singleTargetCornerCell.cell + srcRange.toCell - srcRange.fromCell)];
         } else {
           // we don't know where to paste
           return false;
@@ -624,7 +744,7 @@
       return targetRanges;
     }
 
-    function __processPaste(isInternal, targetRanges, internalSourceRanges, externalSourceData) {
+    function __processPaste(isInternal, targetRanges, internalSourceRanges, externalSourceData, pasteSpecialOptions) {
       if (isInternal) {
         assert(internalSourceRanges);
 
@@ -632,7 +752,8 @@
           from: internalSourceRanges,
           to: targetRanges,
           rangeIsCopied: internalSourceRanges.copy,
-          rangeDataFromExternalSource: false
+          rangeDataFromExternalSource: false,
+          pasteSpecialOptions: pasteSpecialOptions
         });
         // allow for Ctrl-C, Ctrl-V, Ctrl-V, ... repeated paste sequences to be all 'internal' based on that single Ctrl-C copied range!
         //
@@ -661,7 +782,7 @@
       }
     }
 
-    function pasteAction(targetRanges, isInternal, internalSourceRanges, externalSourceData) {
+    function pasteAction(targetRanges, isInternal, internalSourceRanges, externalSourceData, pasteSpecialOptions) {
       // Do keep in mind that there may be no source range what-so-ever when the user is
       // performing an 'external' paste, i.e. is pasting content coming in from outside 
       // the application.
@@ -716,13 +837,51 @@
         _createTextBox('');
 
         _externalCopyPastaCatcherTI = setTimeout(function () {
+          console.warn('SlickGrid ExternalCopyManager: on paste catching focus is on element: ', document.activeElement);
           // check the 'copy fingerprint' to detect if we are copying/pasting cell data 'internally' i.e. within the same slickgrid grid:
           var fp = _externalCopyPastaCatcherEl.value;
           assert(typeof fp === 'string');
           fp = fp.replace(/\r/g, "");
 
+          // The next assert() is invalid for one particular use case:
+          // Start the application and the *first* thing you do is pick a cell and execute
+          // an 'external paste', i.e. hit Ctrl+V without having copied anything in your app/grid before.
+          // 
+          //assert(_copyFingerPrint);
+          
+          assert(fp);
+
           assert(!externalSourceData);
           assert(!internalSourceRanges);
+          console.warn('SlickGrid ExternalCopyManager: grabbing copiedRanges @ pasteAction in timer, at check: ', _copiedRanges, _copyFingerPrint);
+          // complement of the empty single cell cut copy hack
+          // 
+          // WARNING: on Mac/OSX boxes you can type Command+C / Command+V or Control+C (which does NOT affect the clipboard!) / Control+V (which does not use the clipboard as these keyboard commands are operating system and hardware specific and Mac/OSX simply doesn't know about Control+V, only Command+V as 'paste from clipboard' ==> when a user (INCORRECTLY, but alas, we tolerate it anyway) types Control+V on a MAC we'll
+          // get an EMPTY clipboard result returned from our temporary paste-destination text box.
+          // We must account for that here as users happen to run on both Windows and MAC machines and are surprised
+          // by Control+C/X/V actually NOT working on a MAC; we can only support those key bindings locally, i.e. 
+          // inside our web page, as browsers protect system security by denying JavaScript/webpages programmatic
+          // access to the clipboard. Meanwhile we can 'fake' our internal copy/paste process by checking for an
+          // EMPTY clipboard result next to the previous fingerprint being returned.
+          // 
+          // We can get away with that nasty hack as pasting an ACTUAL empty clipboard would imply something along the lines
+          // of 'paste nothing', semantically speaking, so we can argue 'wouldn't it be "better" to then just use the
+          // existing, non-empty, INTERNAL clipboard data instead?' -- of course things remain hairy that way but it's the best
+          // we can do to cope with Control+C and/or Control-V on a MAC; of course disaster will still strike if a user
+          // doesn't pair these properly, e.g. hits Control+C to COPY, then hits COMMAND+V for paste -- which can paste
+          // antique clipboard data into our temp text box and we'll have to use that antique data -- and need to educate the user after all.)
+          if (_copyFingerPrint && _copyFingerPrint.trim() === fp.trim()) {
+              fp = _copyFingerPrint;
+          }
+          // special case: initial Control+V without any previous copy action = external paste always!
+          // special case: multiple Control+V actions at the start of the app!
+          else if (_copyFingerPrint == null) {
+              // no-op
+          }
+          // copy with Control+V on MAC:
+          else if (fp.trim() === "") {
+              fp = _copyFingerPrint;
+          }
           assert(_copyFingerPrint === fp ? _copiedRanges : true);
           __processPaste(_copyFingerPrint === fp, targetRanges, _copiedRanges, fp);
 
@@ -730,9 +889,10 @@
           assert(!_externalCopyPastaCatcherTI);
         }, _externalCopyActionWrapupDelay);
 
+        console.warn('SlickGrid ExternalCopyManager: on brittle paste setup, focus is on element: ', document.activeElement);
         return false;
       } else {
-        return __processPaste(isInternal, targetRanges, internalSourceRanges, externalSourceData);
+        return __processPaste(isInternal, targetRanges, internalSourceRanges, externalSourceData, pasteSpecialOptions);
       }
     }
 
@@ -747,6 +907,8 @@
         // Control+C / Control+X  -- these have the same effect on initial range
         if ((e.which === keyCodes.C || e.which === keyCodes.X) && (e.ctrlKey || e.metaKey)) {
           ranges = _grid.getSelectionModel().getSelectedRanges();
+          var selectedCell = _grid.getActiveCell();
+          ranges = redimTargetRangeToCopiedRanges(ranges, selectedCell, null);
 
           // also remember whether this was Ctrl-C (copy) or Ctrl-X (cut):
           ranges.copy = (e.which === keyCodes.C);
