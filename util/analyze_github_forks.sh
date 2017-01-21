@@ -9,6 +9,9 @@
 
 
 
+wd="$( pwd )";
+
+
 # How to obtain the default repository owner?
 # -------------------------------------------
 # 
@@ -24,9 +27,9 @@ getRepoOwner() {
     if test -z "$1" ; then
         repoOwner=$( git config --get remote.origin.url | sed -E -e 's/^[^:]+(:([^\/]+)\/)?.*$/\2/' )
     fi
-    if test -z $repoOwner ; then
+    if test -z "$repoOwner" ; then
         repoOwner=$( git config --get github.user )
-        if test -z $repoOwner ; then
+        if test -z "$repoOwner" ; then
             repoOwner=$( git config --global --get github.user )
             if test -z "$repoOwner"; then
                 repoOwner=GerHobbelt
@@ -40,17 +43,25 @@ getRepoOwner() {
 
 pushd $(dirname $0)                                                                                     2> /dev/null  > /dev/null
 
+# go to root of project
 cd ..
+
+wd=$( util/print-git-repo-base-directory.sh "$wd" )
+echo "git repository base directory: $wd"
+
+cd "$wd"
 
 
 repoOwner=$( getRepoOwner );
 
-while getopts ":mu:p:h" opt ; do
-    echo opt+arg = "$opt / $OPTARG"
+fastMode=0
+
+while getopts ":mu:fh" opt ; do
+    echo "opt+arg = $opt / $OPTARG"
     case "$opt" in
     "h" )
       cat <<EOT
-$0 [-F] [-l]
+$0 [-f] [-m] [-u UserName]
 
 analyze the registered git remotes and only keep those which are actually still alive AND do
 have 'own work' in them, i.e. only keep the remotes (forks) where someone did some work, rather
@@ -58,9 +69,9 @@ than simply forking as a means to clone the parent repository.
 
 -u       : github username to use (default is taken from the repository you're currently standing in
 
--m       : alternate to specify the github to use: take the git global configured user as the default now.
-
 -p       : github password to use
+
+-f       : fast scan, i.e. do not git pull from the server before we run the analysis
 
 EOT
       popd                                                                                                    2> /dev/null  > /dev/null
@@ -77,9 +88,9 @@ EOT
       repoOwner="$OPTARG"
       ;;
 
-    p )                     
-      echo pass: $OPTARG
-      repoPassword="$OPTARG"
+    f )                     
+      echo 'fast mode enabled!'
+      fastMode=1
       ;;
   
     * )
@@ -94,17 +105,11 @@ if test -z "$repoOwner" ; then
   exit
 fi
 
-if test -z "$repoPassword" ; then
-  echo "ERROR: no github account password specified; run script with '-h' parameter to get help"
-  exit
-fi
-
 cat <<EOT
 -------------------------------------------------------------------------------------------
 Going to run this script with these github credentials:
   
   user =      $repoOwner
-  password =  $repoPassword
 -------------------------------------------------------------------------------------------
 EOT
 
@@ -112,79 +117,175 @@ echo "(Press ENTER to continue...)";
 read;
 
 
-echo "Fetching forks info..."
-mkdir -p __forks.info__                                                                                   2> /dev/null  > /dev/null
-for f in $( git remote -v | sed -e 's/^.*\(\.com\/\|:\)\([^\/]\+\)\/\(.\+\)\.git.*$/https:\/\/api.github.com\/repos\/\2\/\3\/forks?author=\2/' | sort | uniq ) ; do
-    echo "For: $f ..."
-    forkdir=$( echo $f | sed -e 's/https:\/\/api.github.com\/repos\///' -e 's/\/forks?.*$//' -e 's/[^a-zA-Z0_9_-]/_/g' )
-    echo "    dir: $forkdir"
-    author=$( echo $f | sed -e 's/^.*\?author=//' )
-    echo "    author: $author"
-    mkdir -p __forks.info__/$forkdir                                                                      2> /dev/null  > /dev/null
-    cd __forks.info__/$forkdir
-    if test ! -f __author__.dump ; then
-        echo "    url: https://api.github.com/users/$author" 
-        curl -u $repoOwner:$repoPassword  https://api.github.com/users/$author                       > __author__.dump 
-    fi
-    if test ! -f __forks__.dump ; then
-        echo "    url: " $( echo $f | sed -e 's/\/forks?.*$/\/forks/' )
-        curl -u $repoOwner:$repoPassword $( echo $f | sed -e 's/\/forks?.*$/\/forks/' )              > __forks__.dump
-    fi
-    if test ! -f __commits__.dump ; then
-        echo "    url: " $( echo $f | sed -e 's/\/forks?/\/commits?/' )
-        curl -u $repoOwner:$repoPassword $( echo $f | sed -e 's/\/forks?/\/commits?/' )              > __commits__.dump
-    fi
-    # check other branches outside 'master' for commits at the head of them:
-    if test ! -f __refs__.dump ; then
-        echo "    url: " $( echo $f | sed -e 's/\/forks?.*$/\/git\/refs\/heads/' )
-        curl -u $repoOwner:$repoPassword $( echo $f | sed -e 's/\/forks?.*$/\/git\/refs\/heads/' )    > __refs__.dump
-        curl -u $repoOwner:$repoPassword $( echo $f | sed -e 's/\/forks?.*$/\/branches/' )            >> __refs__.dump
-        echo > __extra_commits__.dump
-        for g in $( cat __refs__.dump | grep -e '\/commits\/' | sed -e 's/^.*\/commits\///' -e 's/\".*//' | sort | uniq ) ; do
-            echo "    BRANCH url: " $( echo $f | sed -e 's/\/forks?.*$/\/git\/commits\//' )$( echo $g )
-            curl -u $repoOwner:$repoPassword $( echo $f | sed -e 's/\/forks?.*$/\/git\/commits\//' )$( echo $g )  >> __extra_commits__.dump
-        done 
-        echo "------------------------------------------------" >> __commits__.dump
-        username=$( grep -e '\"name\"' __author__.dump | sed -e 's/^.*\": \"//' -e 's/\".*//' )
-        echo "user / name: $author   ::    $username" 
-        grep -C20 -e "\"$author\"" __extra_commits__.dump >> __commits__.dump
-        #echo "grep -C20 -e \"$username\" __extra_commits__.dump"
-        if ! test -z "$username" ; then  
-            grep -C20 -e "$username" __extra_commits__.dump >> __commits__.dump
-        fi
-    fi
-    cd ../../
-done
+echo "Updating the local repo for all remotes..."
+if test $fastMode -eq 0 ; then
+  git fetch --all --tags
+  #git fetch --all
+fi
 
-
-echo "Collect all the forks listed in there..."
-cat $( find ./__forks.info__ -type f -name __forks__.dump ) > __forks__.bulk_dump
-
-echo "Registering all detected clones..."
-grep -e '"git_url"' __forks__.bulk_dump | sed -e 's/\"//g' -e 's/^.*\s\+git:\/\/github\.com\/\([^\/]\+\)\/\(.\+\)\.git.*$/git remote add \1 git@github.com:\1\/\2.git ;/' | bash
 
 
 echo "Find out which clones have no personal work, i.e. are fruitless, and remove them..."
-for f in $( git remote -v | sed -e 's/^.*\(\.com\/\|:\)\([^\/]\+\)\/\(.\+\)\.git.*$/https:\/\/api.github.com\/repos\/\2\/\3\/forks?author=\2/' | sort | uniq ) ; do
-    #echo "For: $f ..."
-    reponame=$( echo $f | sed -e 's/https:\/\/api.github.com\/repos\///' -e 's/\/[^\/]\+\/forks?.*$//' )
-    #echo "    reponame: $reponame"
-    forkdir=$( echo $f | sed -e 's/https:\/\/api.github.com\/repos\///' -e 's/\/forks?.*$//' -e 's/[^a-zA-Z0_9_-]/_/g' )
-    #echo "    dir: $forkdir"
-    mkdir -p __forks.info__/$forkdir                                                                      2> /dev/null  > /dev/null
-    cd __forks.info__/$forkdir
-    # only check & kill remotes which we've actually collected data for already:
-    if test -f __commits__.dump ; then
-        if test $( grep -e '"message": "Not Found"' __commits__.dump | wc -l ) -gt 0 ; then
-            echo "Repo is not present any more: $reponame      $forkdir"
-            git remote rm $reponame
-        elif test $( grep -e '"sha":' __commits__.dump | wc -l ) -eq 0 ; then  
-            echo "Repo does not contain any new work: $reponame      $forkdir"
-            git remote rm $reponame
-        fi
+# *some* commands cannot execute safely on Windows as even in BASH there we may run out
+# of commandline space, so we take a slightly round-about way sometimes in here in order
+# to prevent (very) large sets of commandline arguments to break this script!
+# 
+# Hence we use a few temporary files, which collect remotes, etc.
+
+# collect the set of registered remotes:
+#
+# Note: use `sed /expr/d` instead of multiple `grep -v` invocations: less piping = faster
+# 
+# do not concern ourselves with the 'origin' remote, nor with any remotes titled XYZ-original
+# nor the remote owned by Yours Truly, who-ever you are!  ;-)
+# 
+# Do NOT SORT the remotes: "first come first serve" applies to the historic order 
+# in which these remotes were added!
+git remote -v | grep -e " (fetch)" | sed -e 's/[ \t].*//' | sed -e '/origin/d' -e "/$repoOwner/d" > ___42_all_remotes___
+
+# create empty file:
+echo x > ___42_check_remotes_1__
+rm -f ___42_check_remotes_1__
+touch ___42_check_remotes_1__
+
+# create empty file:
+echo x > ___42_delete_remotes__
+rm -f ___42_delete_remotes__
+touch ___42_delete_remotes__
+
+# start a file to track the remotes to keep:
+echo "$repoOwner"  > ___42_keep_remotes__
+echo original     >> ___42_keep_remotes__
+echo origin       >> ___42_keep_remotes__
+
+# for f in $( cat ___42_all_remotes___ ) ; do
+#   cnt1=$( git rev-list --all -g  --author=$f --count )
+#   cnt2=$( git rev-list --all -g  --committer=$f --count )
+#   num=$(($cnt1 + $cnt2)) 
+#   echo "User: $f   :: counts: $cnt1 + $cnt2    = $num  (>= 1 means KEEP)"
+#
+#   # Keep any remote which has committed/authored any work:
+#   if test $num -gt 0 ; then
+#     echo "$f"     >> ___42_keep_remotes__
+#   else
+#     # check if remote has any brnaches at all: early detection of empty repositories!
+#     cnt3=$( git branch -a | grep -e "\/$f\/" | wc -l )
+#     if test $cnt3 -gt 0 ; then
+#       echo "$f"     >> ___42_check_remotes_1__
+#     else
+#       echo "Empty repository for remote  $f  ==> TO-BE-DELETED"
+#       echo "$f"     >> ___42_delete_remotes__
+#     fi
+#   fi
+# done
+cat ___42_all_remotes___ >  ___42_check_remotes_1__
+
+
+# create empty file:
+echo x > ___42_check_remotes_2__
+rm -f ___42_check_remotes_2__
+touch ___42_check_remotes_2__
+
+# When the counts say we got to discard the user, it MAY be that he/she is a *team*
+# or their email doesn't match their github username at all:
+for f in $( cat ___42_check_remotes_1__ ) ; do
+  # check for each of the user's branches if the head commit exists in any other branches
+  # which are not his/hers: if the commit does not, we know there's custom work
+  # done in that branch.
+  # 
+  # This tackles the hairy problem of github 'usernames' which represent *groups*
+  # and hence do never show up as committer or author of any commit!
+  
+  keep=0
+  inspect_more=0
+  # make sure the user regex doesn't start with a dash '-', which would confuse grep:
+  for b in $( git branch -a | grep -e "\/$f\/" ) ; do
+    echo "Is branch $b contained in any other branch from anyone else? ..."
+    dups=$( git branch -a --contains $( git rev-list $b | head -1 ) | grep -v -e "\/$f\/" | wc -l )
+    echo "Count: $dups  (=0 means KEEP)"
+    #git branch -a --contains $( git rev-list $b | head -1 ) | sed -e '/original/d' -e "/\/$repoOwner\//d" -e "/\/$f\//d"    | sed -e 's/remotes\///' -e 's/\/.*//' | sort | uniq
+    if test $dups -eq 0 ; then
+      keep=1
+      break
+    else
+      inspect_more=1
     fi
-    cd ../../
+  done
+  
+  # when *either* there were no branches in the remote (this happens for
+  # *empty* repositories -- we've encountered such *forks*, yes!) *or*
+  # _all_ branch heads were found to exist in others' repositories as well,
+  # *then* do we consider to discard the given remote: we MAY be throwing 
+  # away a parent repo which itself was a fork of the original, but alas:
+  # when it doesn't contain any original work by itself any more, then 
+  # a fork of this fork is good enough to keep; we can always re-add the 
+  # repo remote at some later point in time and rerun this analysis: maybe
+  # they have something new and unique then!
+  # 
+  # However, if the remote does have some branches that didn't check out
+  # as 'unique' yet, we need to do a little more work before we finally can
+  # decide to discard the remote entirely!            (inspect_more > 0)
+  if test $keep -gt 0 ; then
+    echo "$f"     >> ___42_keep_remotes__
+  elif test $inspect_more -gt 0 ; then
+    echo "$f"     >> ___42_check_remotes_2__
+  else
+    echo "No unique work found in repository for remote  $f  ==> TO-BE-DELETED"
+    echo "$f"     >> ___42_delete_remotes__
+  fi
 done
+
+
+
+# First come, first serve: the first remote we find to have a branch head
+# which is UNIQUE to the entire collection of currently known 
+# 'to-be-discarded' remotes is the one who is considered 'owner' of that 
+# work and thus will stay around after all!
+for f in $( cat ___42_check_remotes_2__ ) ; do
+  # check for each of the user's branches if the head commit exists in any branches
+  # which belong to currently known-to-be-kept remotes: if the commit does not, we know there's custom work
+  # done in this branch: "first come, first serve" means the user $f is now 
+  # considered the owner of this work!
+  # 
+  # This tackles the hairy problem of github 'usernames' which represent *groups*
+  # and hence do never show up as committer or author of any commit!
+  
+  keep=0
+  # make sure the user regex doesn't start with a dash '-', which would confuse grep:
+  for b in $( git branch -a | grep -e "\/$f\/" ) ; do
+    echo "Is branch $b contained in any branch from known-to-keep users? ..."
+    dups=$( git branch -a --contains $( git rev-list $b | head -1 ) | grep -f ___42_keep_remotes__ | wc -l )
+    echo "Count: $dups"
+    if test $dups -eq 0 ; then
+      keep=1
+      # immediately add this remote to the known-to-keep list so that we will only
+      # keep one remote of many when all of that set are currently in the 
+      # 'to-be-removed' collection: by adding the current remote to the
+      # 'known-to-keep' collection as soon as possible, the next remote(s)
+      # won't get added as well for the same reasons: they will be added when
+      # *they* also prove to carry yet-unknown work!
+      break
+    fi
+  done
+  
+  if test $keep -gt 0 ; then
+    echo "$f"     >> ___42_keep_remotes__
+  else
+    echo "No unique work found in repository for remote  $f  ==> TO-BE-DELETED"
+    echo "$f"     >> ___42_delete_remotes__
+  fi
+done
+
+
+# The list which remains is the list of remotes which SHOULD be removed:
+for f in $( cat ___42_delete_remotes__ ) ; do
+  echo "Repo does not contain any new work:    $f"
+  git remote rm $f
+done
+
+
+# cleanup?
+rm -f ___42_*__
 
 
 

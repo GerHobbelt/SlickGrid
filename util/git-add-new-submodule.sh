@@ -1,11 +1,8 @@
 #! /bin/bash
 #
 
-curdir=$( pwd )
-# http://stackoverflow.com/questions/3572030/bash-script-absolute-path-with-osx/3572105#3572105
-realpath() {
-    [[ $1 = /* ]] && echo "$1" || echo "$curdir/${1#./}"
-}
+wd="$( pwd )";
+
 
 # How to obtain the default repository owner?
 # -------------------------------------------
@@ -36,7 +33,14 @@ getRepoOwner() {
 
 
 pushd $(dirname $0)                                                                                     2> /dev/null  > /dev/null
+utildir="$( pwd )";
+
+# go to root of project
 cd ..
+
+wd=$( $utildir/print-git-repo-base-directory.sh "$wd" )
+echo "git repository base directory: $wd"
+cd "$wd"
 
 # when the commandline starts with '-me' or '--me' then the repoOwner is NOT assumed to match 
 # the one of the repo you're currently standing in:
@@ -59,7 +63,7 @@ When any fork names (github users) are listed, these are added as
 additional repository remotes.
 
 Instead of the <forks> you can specify a JSON file as obtained raw 
-from github by specifying its elative or absolute path: it is recognized
+from github by specifying its relative or absolute path: it is recognized
 as a path just as long as you make sure there's at least one slash '/'
 in it.
 
@@ -109,7 +113,6 @@ author=$3
 # check if the specified repository is a git URL or simply a repo name: in the latter case the URL is constructed for you.
 #
 # http://askubuntu.com/questions/299710/how-to-determine-if-a-string-is-a-substring-of-another-in-bash
-echo  test "${giturl/:}" = "$giturl"
 if test "${giturl/:}" = "$giturl" ; then
     if test -z $githubowner ; then
         githubowner=$repoOwner
@@ -149,37 +152,46 @@ fi
 echo "(Press ENTER to continue...)";
 read;
 
+pwd
+echo git submodule add $giturl $dstdir
 git submodule add $giturl $dstdir
 
-cd $dstdir
-
-if test -n "$author" ; then
-    git remote add ${author}-original git://github.com/$author/$repo.git
-
-    # add additional forks as remotes:
-    shift 3
-
-    while test -n "$1" ; do
-        author=$1
-        # http://askubuntu.com/questions/299710/how-to-determine-if-a-string-is-a-substring-of-another-in-bash
-        if test "${1/\/}" = "$1" ; then
-            git remote add ${author} git://github.com/$author/$repo.git
-        else
-            # network_meta file from github
-            networkmeta=$( realpath "$1" )
-            echo "*** networkmeta JSON file:   $networkmeta ***"
-            # http://unix.stackexchange.com/questions/41232/loop-through-tab-delineated-file-in-bash-script
-            # This code requires `npm install json -g` (jsontools: http://trentm.com/json/ )
-            cat $networkmeta | json users | json -a name repo | while read author clonename ; do
-                git remote add ${author} git://github.com/$author/$clonename.git
-            done
-        fi
-        shift
-    done
+# make sure the submodule is *initialized*
+if test -d "$dstdir" && ! test -f "$dstdir/.git" ; then
+  echo "(Initializing submodule first...)";
+  git submodule update --init "$dstdir"
+  if test -d "$dstdir" ; then
+    pushd "$dstdir"                                                                                        2> /dev/null  > /dev/null
+    git checkout master
+    popd                                                                                                   2> /dev/null  > /dev/null
+  fi
 fi
 
-git pull --all
-git fetch --tags
+# by now we should have fully installed submodule ready for us, one way or another:
+if test -d "$dstdir" && test -f "$dstdir/.git" ; then
+    cd "$dstdir"
 
+    if test -n "$author" ; then
+        git remote add "${author}-original" "git@github.com:$author/$repo.git"
+
+        # add additional forks as remotes:
+        shift 3
+
+        if test $# -gt 0 ; then
+            "$utildir/git-add-remotes.sh" -q "$@"
+        fi
+    fi
+
+    git pull --all
+    git fetch --tags
+else
+    cat <<EOT
+
+** ERROR **
+
+Failed to instantiate the local submodule clone!
+
+EOT
+fi
 
 popd                                                                                                    2> /dev/null  > /dev/null

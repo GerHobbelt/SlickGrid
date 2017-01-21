@@ -1,5 +1,8 @@
 #! /bin/bash
 #
+# HELP/NOTE: get online help by calling with:   -h
+#
+# 
 # checkout all submodules to their desired 'HEAD' bleeding edge revision: MASTER for most.
 #
 
@@ -33,7 +36,8 @@ checkout git submodules to the preconfigured branch (master / other).
 -l       : list the submodules which will be checked out to a non-'master' branch
 
 EOT
-  exit
+  popd                                                                                                  2> /dev/null  > /dev/null
+  exit 2
   ;;
 
 "l" )
@@ -82,30 +86,32 @@ fi
 
 # args: lib localname remote
 function checkout_branch {
-    pushd $1                                                                                                2> /dev/null  > /dev/null
-    case "$mode" in
+    if test -d $1 ; then
+        pushd $1                                                                                                2> /dev/null  > /dev/null
+        case "$mode" in
 F )
-        echo "submodule: $1, branch: $2 (FORCED)"
-        git branch --track $2 origin/$2                                                                            2> /dev/null
-        git reset --hard
-        git checkout $2 $3 --force
-        git reset --hard
-  ;;
+            echo "submodule: $1, branch: $2 (FORCED)"
+            git branch --track $2 origin/$2                                                                            2> /dev/null
+            git reset --hard
+            git checkout $2 $3 --force
+            git reset --hard
+            ;;
 
 "?" )
-        if test "$2" != "master"; then
-            echo "submodule: $1"
-            echo "                                         branch: $2"
-        fi
-        ;;
+            if test "$2" != "master"; then
+                echo "submodule: $1"
+                echo "                                         branch: $2"
+            fi
+            ;;
 
 R )
-        echo "submodule: $1, branch: $2"
-        git branch --track $2 origin/$2                                                                            2> /dev/null
-        git checkout $2 $3
-        ;;
-    esac
-    popd                                                                                                    2> /dev/null  > /dev/null
+            echo "submodule: $1, branch: $2"
+            git branch --track $2 origin/$2                                                                            2> /dev/null
+            git checkout $2 $3
+            ;;
+        esac
+        popd                                                                                                    2> /dev/null  > /dev/null
+    fi
 }
 
 # checkout_branch css/lib/Font-Awesome                experimental                                         $@
