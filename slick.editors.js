@@ -1,7 +1,7 @@
 /*!
  * @license
  * slickGrid v2.3.18-alpha.1011 (https://github.com/GerHobbelt/SlickGrid)
- * Copyright 2009-2015 Michael Leibman <michael{dot}leibman{at}gmail{dot}com>
+ * Copyright 2009-2017 Michael Leibman <michael{dot}leibman{at}gmail{dot}com>
  *
  * Distributed under MIT license.
  * All rights reserved.
@@ -56,6 +56,10 @@
 
 
 //! Source: editors/slick.editors.001.Row.js
+
+
+
+
 
 
 
@@ -143,6 +147,10 @@
 
 
 //! Source: editors/slick.editors.002.Text.js
+
+
+
+
 
 
 
@@ -262,6 +270,10 @@
 
 
 
+
+
+
+
   // register namespace
   Slick.Editors.ReadOnly = ReadOnlyEditor;
 
@@ -349,6 +361,10 @@
 
 
 
+
+
+
+
   function applyModifier(val, mod) {
     var m = isValidModifier(mod);
     if (!m)
@@ -392,6 +408,10 @@
 
 
 //! Source: editors/slick.editors.005.Integer.js
+
+
+
+
 
 
 
@@ -506,13 +526,6 @@
         };
       }
 
-      if (args.column.validator) {
-        var validationResults = args.column.validator($input.val());
-        if (!validationResults.valid) {
-          return validationResults;
-        }
-      }
-
       return {
         valid: true,
         msg: null
@@ -524,6 +537,10 @@
 
 
 //! Source: editors/slick.editors.006.Float.js
+
+
+
+
 
 
 
@@ -592,7 +609,7 @@
     // Returns the number of fixed decimal places or `null`
     this.getDecimalPlaces = function () {
       var rtn = args.column && args.column.editorFixedDecimalPlaces;
-      if (rtn == null) { 
+      if (!rtn && rtn !== 0) { 
         rtn = this.defaultDecimalPlaces;
       }
       return (!rtn && rtn !== 0 ? null : rtn);
@@ -656,13 +673,6 @@
         };
       }
 
-      if (args.column.validator) {
-        var validationResults = args.column.validator($input.val());
-        if (!validationResults.valid) {
-          return validationResults;
-        }
-      }
-
       return {
         valid: true,
         msg: null
@@ -675,6 +685,10 @@
 
 
 //! Source: editors/slick.editors.007.Percentage.js
+
+
+
+
 
 
 
@@ -808,6 +822,10 @@
 
 
 //! Source: editors/slick.editors.008.Date.js
+
+
+
+
 
 
 
@@ -1019,6 +1037,10 @@
 
 
 
+
+
+
+
   // register namespace
   Slick.Editors.YesNoSelect = YesNoSelectEditor;
 
@@ -1087,13 +1109,6 @@
     };
 
     this.validate = function () {
-      if (args.column.validator) {
-        var validationResults = args.column.validator($input.val());
-        if (!validationResults.valid) {
-          return validationResults;
-        }
-      }
-
       return {
         valid: true,
         msg: null
@@ -1105,6 +1120,10 @@
 
 
 //! Source: editors/slick.editors.010.Checkbox.js
+
+
+
+
 
 
 
@@ -1199,6 +1218,10 @@
 
 
 //! Source: editors/slick.editors.011.PercentageComplete.js
+
+
+
+
 
 
 
@@ -1367,6 +1390,10 @@
 
 
 //! Source: editors/slick.editors.012.LongText.js
+
+
+
+
 
 
 
@@ -1557,13 +1584,6 @@
     };
 
     this.validate = function () {
-      if (args.column.validator) {
-        var validationResults = args.column.validator($input.val());
-        if (!validationResults.valid) {
-          return validationResults;
-        }
-      }
-
       return {
         valid: true,
         msg: null
@@ -1577,6 +1597,10 @@
 
 
 //! Source: editors/slick.editors.013.Color.js
+
+
+
+
 
 
 
@@ -1713,6 +1737,10 @@
 
 
 //! Source: editors/slick.editors.014.SelectCell.js
+
+
+
+
 
 
 

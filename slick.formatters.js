@@ -1,7 +1,7 @@
 /*!
  * @license
  * slickGrid v2.3.18-alpha.1011 (https://github.com/GerHobbelt/SlickGrid)
- * Copyright 2009-2015 Michael Leibman <michael{dot}leibman{at}gmail{dot}com>
+ * Copyright 2009-2017 Michael Leibman <michael{dot}leibman{at}gmail{dot}com>
  *
  * Distributed under MIT license.
  * All rights reserved.
@@ -50,6 +50,10 @@
 
 
 
+
+
+
+
   // register namespace
   Slick.Formatters.PercentComplete = PercentCompleteFormatter;
 
@@ -73,6 +77,10 @@
   }
 
 //! Source: formatters/slick.formatters.002.PercentCompleteBar.js
+
+
+
+
 
 
 
@@ -126,6 +134,10 @@
 
 
 
+
+
+
+
   // register namespace
   Slick.Formatters.YesNo = YesNoFormatter;
 
@@ -140,6 +152,10 @@
 
 
 //! Source: formatters/slick.formatters.004.Checkmark.js
+
+
+
+
 
 
 
@@ -180,6 +196,10 @@
 
 
 
+
+
+
+
   // register namespace
   Slick.Formatters.Color = ColorFormatter;
 
@@ -194,6 +214,10 @@
 
 
 //! Source: formatters/slick.formatters.006.BackColor.js
+
+
+
+
 
 
 
@@ -223,6 +247,10 @@
 
 
 //! Source: formatters/slick.formatters.007.Text.js
+
+
+
+
 
 
 
@@ -269,6 +297,10 @@
 
 
 
+
+
+
+
   // register namespace
   Slick.Formatters.ReferenceValue = ReferenceValueFormatter;
 
@@ -302,6 +334,10 @@
 
 
 //! Source: formatters/slick.formatters.009.Date.js
+
+
+
+
 
 
 
@@ -364,6 +400,10 @@
 
 
 
+
+
+
+
   // register namespace
   Slick.Formatters.Chain = Chain;
 
@@ -384,6 +424,10 @@
 
 
 //! Source: formatters/slick.formatters.011.Link.js
+
+
+
+
 
 
 
@@ -430,6 +474,10 @@
 
 
 //! Source: formatters/slick.formatters.012.Concatenator.js
+
+
+
+
 
 
 
