@@ -736,26 +736,38 @@
     var obj = {
     };
     // feature detect:
-    /* @private */ var f;
-    /* @private */ var p = window.performance;
+    /* @private */ var f, tv;
+    /* @private */ var p = (typeof window !== 'undefined' && window.performance);
     if (p && p.timing.navigationStart && p.now) {
       f = function () {
         return p.now();
       };
-    } else if (p && p.webkitNow) {
+    } else if (p && typeof p.webkitNow === 'function') {
       f = function () {
         return p.webkitNow();
       };
     } else {
-      f = function () {
-        return Date.now();
-      };
-      try {
-        f();
-      } catch (ex) {
+      p = (typeof process !== 'undefined' && process.hrtime);
+      if (typeof p === 'function') {
+        tv = p();
+        if (tv && tv.length === 2) {
+          f = function () {
+            var rv = p();
+            return rv[0] * 1e3 + rv[1] * 1e-6;
+          };
+        } 
+      } 
+      if (!f) {
         f = function () {
-          return +new Date();
+          return Date.now();
         };
+        try {
+          f();
+        } catch (ex) {
+          f = function () {
+            return +new Date();
+          };
+        }
       }
     }
 
@@ -769,7 +781,7 @@
     obj.mark = function (id, start_id) {
       if (start_time === false) this.start();
       var end_time = f();
-      var begin_time = start_time[start_id || "start"];
+      var begin_time = start_time[start_id || id || "start"];
       if (!begin_time) {
         begin_time = end_time;
       }
@@ -1019,7 +1031,7 @@
 
         if (hasFunctionCompilation) {
           // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Function
-          fn = new Function("return function " + (functionName || "").replace(/[^a-z0-9]/gi, "_") + "(" + (functionParameters || "") + ") {\n" + (functionBody || "") + "};");                    // jshint ignore:line
+          fn = new Function("return function " + (functionName || "").replace(/[^a-zA-Z0-9]/g, "_") + "(" + (functionParameters || "") + ") {\n" + (functionBody || "") + "};");                    // jshint ignore:line
           fn = fn();
         } else {
           return null;
