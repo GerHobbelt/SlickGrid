@@ -91,10 +91,17 @@
 
         function getRowsRange(from, to) {
             var i, rows = [];
+            // create an ascending list of row indexes, no matter the order
+            // of the `from` vs. `to` input row indexes above:
             for (i = from; i <= to; i++) {
                 rows.push(i);
             }
-            for (i = to; i <= from; i++) {
+            // ... and the reverse when `to < from`, i.e. a reverse-specified 
+            // range with 2(!) rows or more. 
+            //
+            // The 1-row-only case has already been handled by the loop above, 
+            // hence the slightly different loop termination condition here:
+            for (i = to; i < from; i++) {
                 rows.push(i);
             }
             return rows;
@@ -130,7 +137,8 @@
         }
 
         function setSelectedRanges(ranges) {
-            // simple check for: empty selection doesn't change anything from existing empty selection, prevent firing `onSelectedRangesChanged`
+            // simple check for: empty selection doesn't change anything 
+            // from existing empty selection, prevent firing `onSelectedRangesChanged`
             if ((!_ranges || _ranges.length === 0) && (!ranges || ranges.length === 0)) { 
                 return; 
             }
