@@ -29,13 +29,6 @@
     var _copiedCellStyleLayerKey = _options.copiedCellStyleLayerKey || "copy-manager";
     var _copiedCellStyle = _options.copiedCellStyle || "copied";
 
-    var keyCodes = {
-      'C': 67,
-      'V': 86,
-      'X': 88,
-      'ESC': 27
-    };
-
     function init(grid) {
       _grid = grid;
       _grid.onKeyDown.subscribe(handleKeyDown);
@@ -60,7 +53,7 @@
     function handleKeyDown(e, args) {
       var ranges;
       if (!_grid.getEditorLock().isActive()) {
-        if (e.which === keyCodes.ESC) {
+        if (e.which === Slick.Keyboard.ESCAPE) {
           if (_copiedRanges) {
             e.preventDefault();
             clearCopySelection();
@@ -73,12 +66,12 @@
         }
 
         // Control+C / Control+X  -- these have the same effect on initial range
-        if ((e.which === keyCodes.C || e.which === keyCodes.X) && (e.ctrlKey || e.metaKey)) {
+        if ((e.which === Slick.Keyboard.C || e.which === Slick.Keyboard.X) && (e.ctrlKey || e.metaKey)) {
           // make sure to clone (shallow) the range set as any subsequent selection action will echo into _copiedRanges!
           ranges = _grid.getSelectionModel().getSelectedRanges().slice(0);
 
           // also remember whether this was Ctrl-C (copy) or Ctrl-X (cut):
-          ranges.copy = (e.which === keyCodes.C);
+          ranges.copy = (e.which === Slick.Keyboard.C);
 
           if (ranges.length !== 0) {
             e.preventDefault();
@@ -94,7 +87,7 @@
         }
 
         // Control+V
-        if (e.which === keyCodes.V && (e.ctrlKey || e.metaKey)) {
+        if (e.which === Slick.Keyboard.V && (e.ctrlKey || e.metaKey)) {
           if (_copiedRanges) {
             e.preventDefault();
             ranges = _grid.getSelectionModel().getSelectedRanges();

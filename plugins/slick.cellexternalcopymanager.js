@@ -103,13 +103,6 @@
     var _externalCopyPastaCatcherEl = null;
     var _externalCopyPastaCatcherElBackup = null;
 
-    var keyCodes = {
-      'C': 67,
-      'V': 86,
-      'X': 88,
-      'ESC': 27
-    };
-
     function init(grid) {
       _grid = grid;
       _grid.onKeyDown.subscribe(handleKeyDown);
@@ -221,18 +214,18 @@
         _externalCopyPastaCatcherElBackup = document.activeElement;
 
         var ta = document.createElement('textarea');
-	
-	// make it a free-for-all text area which checks nothing: we accept arbitrary input:
-	// see also https://developer.mozilla.org/en-US/docs/Web/HTML/Element/textarea#Attributes
-	// Setting all these explicitly ensures that the browser or application itself doesn't 
-	// introduce any 'smart stuff' we don't want in here!
-	ta.spellcheck = false;
-	ta.readOnly = false;
-	ta.disabled = false;
-	ta.autocomplete = 'off';
-	ta.autocapitalize = 'none';
-	ta.wrap = 'soft';
-	
+        
+        // make it a free-for-all text area which checks nothing: we accept arbitrary input:
+        // see also https://developer.mozilla.org/en-US/docs/Web/HTML/Element/textarea#Attributes
+        // Setting all these explicitly ensures that the browser or application itself doesn't 
+        // introduce any 'smart stuff' we don't want in here!
+        ta.spellcheck = false;
+        ta.readOnly = false;
+        ta.disabled = false;
+        ta.autocomplete = 'off';
+        ta.autocapitalize = 'none';
+        ta.wrap = 'soft';
+        
         ta.style.position = 'absolute';
         ta.style.left = '-1250px';
         ta.style.top = (document.body.scrollTop + 150) + 'px';
@@ -393,8 +386,9 @@
           var addRows = 0;
           if (availableRows < this.destH) {
             d = _grid.getData();
-            for (addRows = 1; addRows <= this.destH - availableRows; addRows++)
-                d.push({});
+            for (addRows = 1; addRows <= this.destH - availableRows; addRows++) {
+              d.push({});
+            }
             _grid.setData(d);
             _grid.render();
           }
@@ -584,28 +578,28 @@
 
         // Note: this feature only works well when you have either a single range or all ranges address the same columns
         if (_options.includeHeaderWhenCopying) {
-            var clipTextHeaders = [];
-            range = ranges[0];
+          var clipTextHeaders = [];
+          range = ranges[0];
 
-            for (j = range.fromCell; j <= range.toCell; j++) {
-                clipTextHeaders.push(columns[j].name || '');
-            }
-            clipTextArr.push(clipTextHeaders.join("\t") + "\r\n");
+          for (j = range.fromCell; j <= range.toCell; j++) {
+            clipTextHeaders.push(columns[j].name || '');
+          }
+          clipTextArr.push(clipTextHeaders.join("\t") + "\r\n");
         }
 
         for (var rg = 0; rg < ranges.length; rg++) {
-            range = ranges[rg];
-            var clipTextRows = [];
-            for (i = range.fromRow; i <= range.toRow; i++) {
-                var clipTextCells = [];
-                var dt = _grid.getDataItem(i);
+          range = ranges[rg];
+          var clipTextRows = [];
+          for (i = range.fromRow; i <= range.toRow; i++) {
+            var clipTextCells = [];
+            var dt = _grid.getDataItem(i);
 
-                for (j = range.fromCell; j <= range.toCell; j++) {
-                    clipTextCells.push(getDataItemValueForColumn(dt, columns[j], clipTextRows.length, clipTextCells.length, i, j));
-                }
-                clipTextRows.push(clipTextCells.join("\t"));
+            for (j = range.fromCell; j <= range.toCell; j++) {
+              clipTextCells.push(getDataItemValueForColumn(dt, columns[j], clipTextRows.length, clipTextCells.length, i, j));
             }
-            clipTextArr.push(clipTextRows.join("\r\n"));
+            clipTextRows.push(clipTextCells.join("\t"));
+          }
+          clipTextArr.push(clipTextRows.join("\r\n"));
         }
         var clipText = clipTextArr.join('');
         _copyFingerPrint = clipText.replace(/\r/g, "");
@@ -692,7 +686,7 @@
             //$focus.attr('tabIndex', '-1');
             //$focus.focus();
             //$focus.removeAttr('tabIndex');
-	    
+      
             // IF WE ENABLE THIS setActiveCell, the grid jumps to this upon Ctrl-X or Ctrl-C
             _grid.setActiveCell(activeCell.row, activeCell.cell, {
               forceEditMode: false,
@@ -871,16 +865,16 @@
           // doesn't pair these properly, e.g. hits Control+C to COPY, then hits COMMAND+V for paste -- which can paste
           // antique clipboard data into our temp text box and we'll have to use that antique data -- and need to educate the user after all.)
           if (_copyFingerPrint && _copyFingerPrint.trim() === fp.trim()) {
-              fp = _copyFingerPrint;
+            fp = _copyFingerPrint;
           }
           // special case: initial Control+V without any previous copy action = external paste always!
           // special case: multiple Control+V actions at the start of the app!
           else if (_copyFingerPrint == null) {
-              // no-op
+            // no-op
           }
           // copy with Control+V on MAC:
           else if (fp.trim() === "") {
-              fp = _copyFingerPrint;
+            fp = _copyFingerPrint;
           }
           assert(_copyFingerPrint === fp ? _copiedRanges : true);
           __processPaste(_copyFingerPrint === fp, targetRanges, _copiedRanges, fp);
@@ -900,18 +894,18 @@
       assert(!(e instanceof Slick.EventData));
       var ranges, rv;
       if (!_grid.getEditorLock().isActive()) {
-        if (e.which === keyCodes.ESC) {
+        if (e.which === Slick.Keyboard.ESCAPE) {
           cancelCopyAction();
         }
 
         // Control+C / Control+X  -- these have the same effect on initial range
-        if ((e.which === keyCodes.C || e.which === keyCodes.X) && (e.ctrlKey || e.metaKey)) {
+        if ((e.which === Slick.Keyboard.C || e.which === Slick.Keyboard.X) && (e.ctrlKey || e.metaKey)) {
           ranges = _grid.getSelectionModel().getSelectedRanges();
           var selectedCell = _grid.getActiveCell();
           ranges = redimTargetRangeToCopiedRanges(ranges, selectedCell, null);
 
           // also remember whether this was Ctrl-C (copy) or Ctrl-X (cut):
-          ranges.copy = (e.which === keyCodes.C);
+          ranges.copy = (e.which === Slick.Keyboard.C);
 
           rv = cutOrCopyAction(ranges, !ranges.copy, true);
 
@@ -922,7 +916,7 @@
         }
 
         // Control+V
-        if (e.which === keyCodes.V && (e.ctrlKey || e.metaKey)) {
+        if (e.which === Slick.Keyboard.V && (e.ctrlKey || e.metaKey)) {
           ranges = _grid.getSelectionModel().getSelectedRanges();
           var selectedCell = _grid.getActiveCell();
           var targetRanges = redimTargetRangeToCopiedRanges(ranges, selectedCell, _copiedRanges);
