@@ -976,6 +976,12 @@
      *                                     applied re implicit semicolon fixups nor do we apply any
      *                                     kind of code analysis or uglification/minification.
      *
+     * @param  {Boolean|Function} test     Set to TRUE or specify a test function when you cannot guarantee that the code fed to 
+     *                                     this function code compiler will parse on all platforms.
+     *                                     This will make this compiler use a mode where the function
+     *                                     construction is wrapped inside a `try..catch` block to catch
+     *                                     any late parse errors and then a NULL result will be produced.
+     *
      * @return {Function}                  The compiled JavaScript function.
      *
      *                                     We will return `null` when the current environment
@@ -993,7 +999,7 @@
     var compiler;
     switch (hasAltFunctionName) {
     case false:
-      compiler = function compile_javascript(functionName, functionParameters, functionBody) {
+      compiler = function compile_javascript(functionName, functionParameters, functionBody, test) {
         if (Array.isArray(functionParameters)) {
           functionParameters = functionParameters.join(",");
         }
@@ -1005,7 +1011,22 @@
 
         if (hasFunctionCompilation) {
           // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Function
-          fn = new Function(functionParameters || "", functionBody || "");                    // jshint ignore:line
+          if (!test) {
+            fn = new Function(functionParameters || "", functionBody || "");                    // jshint ignore:line
+          } else {
+            // We only want the costly try-catch around here when our invoker isn't absolutely 
+            // sure they provided us with rock-solid JavaScript.
+            try {
+              fn = new Function(functionParameters || "", functionBody || "");                    // jshint ignore:line
+              // if `test` is a function, run it to validate the compiled code:
+              if (typeof test === 'function') {
+                test(fn, functionName, functionParameters, functionBody);
+              }
+            } catch (comp_ex) {
+              console.warn("Cannot compile function:", functionName, " body: ", functionBody, comp_ex);
+              return null;
+            }
+          }
         } else {
           return null;
         }
@@ -1019,7 +1040,7 @@
       break;
 
     default: // case true:
-      compiler = function compile_javascript_alternative(functionName, functionParameters, functionBody) {
+      compiler = function compile_javascript_alternative(functionName, functionParameters, functionBody, test) {
         if (Array.isArray(functionParameters)) {
           functionParameters = functionParameters.join(",");
         }
@@ -1031,8 +1052,24 @@
 
         if (hasFunctionCompilation) {
           // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Function
-          fn = new Function("return function " + (functionName || "").replace(/[^a-zA-Z0-9]/g, "_") + "(" + (functionParameters || "") + ") {\n" + (functionBody || "") + "};");                    // jshint ignore:line
-          fn = fn();
+          if (!test) {
+            fn = new Function("return function " + (functionName || "").replace(/[^a-z0-9]/gi, "_") + "(" + (functionParameters || "") + ") {\n" + (functionBody || "") + "};");                    // jshint ignore:line
+            fn = fn();
+          } else {
+            // We only want the costly try-catch around here when our invoker isn't absolutely 
+            // sure they provided us with rock-solid JavaScript.
+            try {
+              fn = new Function("return function " + (functionName || "").replace(/[^a-z0-9]/gi, "_") + "(" + (functionParameters || "") + ") {\n" + (functionBody || "") + "};");                    // jshint ignore:line
+              fn = fn();
+              // if `test` is a function, run it to validate the compiled code:
+              if (typeof test === 'function') {
+                test(fn, functionName, functionParameters, functionBody);
+              }
+            } catch (comp_ex) {
+              console.warn("Cannot compile function:", functionName, " body: ", functionBody, comp_ex);
+              return null;
+            }
+          }
         } else {
           return null;
         }
@@ -1112,6 +1149,8 @@
         You may add other replacements here for HTML only
         (but it's not necessary).
         Or for XML, only if the named entities are defined in its DTD.
+
+        N.B.: Make sure you patch the replace regex below too! 
         */
     };
     options = options || {};
@@ -1277,6 +1316,10 @@
       COMMAND: 91,
 
       F2: 113,
+
+      C: 67,
+      V: 86,
+      X: 88,
     });
 
     return keycodes;
