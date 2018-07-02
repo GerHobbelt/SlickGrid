@@ -1142,7 +1142,14 @@ if (typeof Slick === "undefined") {
    *                                           asyncRenderSlice / (asyncRenderSlice + asyncRenderInterleave)
    *                                      or slightly higher -- as the renderer will continue until the `asyncRenderSlice` has actually 
    *                                      *expired*!
+   *      maxRowsRenderedPerRenderSlice: {Number} 
+   *                                      Maximum number of rows SlickGrid is allowed to render per time slice. 
+   *                                      This is another way to control the time spent in each render time slice, apart from the `asyncRenderSlice` timeout. Default value: MAX_INT (meaning only the `asyncRenderSlice` time will be used to limit the time spent in each render time slice.)
    *      pauseRendering:     {Boolean}   when set, SlickGrid will not update/render the grid until the `resumeRendering()` API has been invoked.
+   *      enableAsyncPostRenderCleanup: {Boolean}
+   *                                      Postpone cleaning up deleted DOM nodes (rows of cells) until a later time. Default value: `false`
+   *      asyncPostRenderCleanupDelay: {Number}
+   *                                      Number of milliseconds to wait until SlickGrid will finally go and delete the removed DOM nodes from memory.
    *      addNewRowCssClass:  {String}    specifies CSS class for the extra bottom row: "add new row"
    * 
    * @class 
@@ -1530,7 +1537,7 @@ if (typeof Slick === "undefined") {
       }
 
       $viewport = $("<div class='slick-viewport' >").appendTo($container);
-      //$viewport.css("overflow-y", (options.autoHeight && !clippedAutoSize) ? "auto" : "auto");
+	      //$viewport.css("overflow-y", (options.autoHeight && !clippedAutoSize) ? "auto" : "auto");
 
       $canvas = $("<div class='grid-canvas' />").appendTo($viewport);
 
@@ -2038,7 +2045,7 @@ if (typeof Slick === "undefined") {
       $boundAncestors = null;
     }
 
-    // title and/or toolTip may be NULL: then the existing value(s) as present in the column
+    // Title and/or toolTip may be NULL: then the existing value(s) as present in the column
     // definition will be used instead.
     function updateColumnHeader(columnId, title, toolTip) {
       if (!initialized) { return false; }
@@ -2105,6 +2112,7 @@ if (typeof Slick === "undefined") {
       var columnDef = columns[idx];
       assert(columnDef);
       assert(columnDef.headerRow === (hasNestedColumns ? nestedColumns.length - columnDef.headerRowSpan : 0));
+																																																										
       var elId = mkSaneId(columnDef, idx, "headerrow" + columnDef.headerRow);
       var $header = $headerRow.find("#" + elId); // Do not write this as `$("#" + elId)` because the headers may not yet be included in the page DOM! 
       assert(($headerRow.length && $header.length) ? $.contains($headerRow[0], $header[0]) : true);
@@ -2166,10 +2174,11 @@ if (typeof Slick === "undefined") {
 
     // This completely redraws the headers and re-binds events
     // 
-    // TODO: Visyond uses virtual rendering for the grid itself, but is very slow in rendering (and updating) the headers
+    // TODO: We use virtual rendering for the grid itself, but is very slow in rendering (and updating) the headers
     //       as those are rendered in their entirety. We should apply the virtual rendering process to the SlickGrid headers
     //       too (i.e. only render a visible+buffer portion of the headers) but this has a significant impact on the event
     //       handlers too: those would all then have to move to the headers container DIV!
+    //
     //       (Think about the impact on contentmenu and similar plugins which add event handlers to the headers' DOM!)
     function createColumnHeaders() {
       function onMouseEnter() {
@@ -3054,6 +3063,8 @@ if (0) {
       return dimensions;
     }
 
+/* @TODO: DEAD CODE REMOVAL
+
     // Given an element, return the sum of vertical paddings and borders on that element.
     function getVBoxDelta($el) {
       var h = $el.height();         // jQuery: content only
@@ -3063,13 +3074,15 @@ if (0) {
       return delta;
     }
 
-    function getHBoxDelta($el, metricsRef) {
+    function getHBoxDelta($el) {
       var h = $el.width();         // jQuery: content only
       var oh = $el.outerWidth();   // jQuery: content + padding + border, excluding margin
       var delta = oh - h;
       assert(delta >= 0);
       return delta;
     }
+
+*/
 
     // These rules are responsible for heights and cell widths, but not column header widths.
     //
@@ -4210,7 +4223,7 @@ if (0) {
     // function reports an out-of-legal-range 'clipped' position: the fraction shows
     // how far out-of-range the given coordinate was as a ratio of the given row height.
     // 
-    // Use a binary search alike algorithm to find the row, using 
+    // Uses a binary search alike algorithm to find the row, using 
     // linear estimation to produce the initial split/probe point and probing range: 
     // this improves significantly on the O(log(n)) of a binary search.
     // 
@@ -5732,7 +5745,6 @@ if (0) {
       }
     }
 
-
     function invalidate() {
       invalidateAllRows();
       updateRowCount();
@@ -6933,6 +6945,7 @@ if (0) {
       // |  |  |
       // +--+  +
       // .  .  .
+      //
       // and so on. Note that the rowspans for columns A and B repeat, thus causing the
       // cache filler to fill the entire spans cache in one fell swoop. It has to as otherwise
       // we would end up with a corrupted cache.
@@ -7282,7 +7295,7 @@ if (0) {
 
           checkTheTime = function h_checkTheTime_f(aborted) {
             if (aborted) {
-              //break out;
+              // break out
               signal_timeout = true;
             }
 
@@ -7487,7 +7500,7 @@ if (0) {
       
         // when width of headers cells changed and h scrolling
         // has been applied $headerScroller[0].scrollLeft gets 0
-        // seometimes so reset it to previous scrollLeft
+        // sometimes so reset it to previous scrollLeft
         $headerScroller[0].scrollLeft = prevScrollLeft;
 
         // /@TO-BE-INSPECTED
@@ -8107,8 +8120,10 @@ out:
       return false;
     }
 
+
     //////////////////////////////////////////////////////////////////////////////////////////////
     // Interactivity
+
 
     // Handle header drags the way body drags are handled, so we set up a parallel
     // set of handlers to the ones used for body drags.
@@ -9007,9 +9022,9 @@ out:
       };
     }
 
-    // Given a cell element, read column number from .l<columnNumber> CSS class
+    /// Given a cell element, read column number from .l<columnNumber> CSS class
     function getCellFromNode(cellNode) {
-      var cls = / l(\d+) /.exec(" " + cellNode.className + " ");
+      var cls = /\bl(\d+)\b/.exec(cellNode.className);
       if (!cls) {
         assert(0, "getCellFromNode: cannot get cell - " + cellNode.className);
         return null;
@@ -9017,10 +9032,10 @@ out:
       return +cls[1];
     }
 
-    // Given a dom element for a row, find out which row index it belongs to
+    /// Given a DOM element for a row, find out which row index it belongs to
     function getRowFromNode(rowNode) {
       assert(rowNode);
-      var rws = / slick-row-(\d+) /.exec(" " + rowNode.className + " ");
+      var rws = /\bslick-row-(\d+)\b/.exec(rowNode.className);
       if (!rws) {
         assert(0, "getRowFromNode: cannot get row - " + rowNode.className);
         return null;
@@ -9331,7 +9346,8 @@ out:
       }
     }
 
-    // TODO: commit SHA-1: fc61ae0bbb360fe3b3f8d3dd461431c67537733c :: describe the API. code is TODO.
+    // TODO: commit SHA-1: fc61ae0bbb360fe3b3f8d3dd461431c67537733c :: describe the API. 
+    // code is TODO.
     function scrollCellIntoView(row, cell, doPaging, doCenteringY) {
       scrollRowIntoView(row, doPaging, doCenteringY);
 
@@ -9699,7 +9715,7 @@ out:
     
       // ## About `suppressClearOnEdit` / `clearCellBeforeEdit` settings in other SlickGrid clones
       //
-      // We solve this another way by *not* externalizing that bit behaviour from the editor;
+      // We solve this another way by *not* externalizing that bit of behaviour from the editor;
       // instead, we always let the editor handle this situation itself for maximum flexibility 
       // and organized control: every editor instance receives a reference to the cell 
       // DOM container node, among other things, so the editor code can perform this optional
@@ -9836,7 +9852,8 @@ out:
       return activeCellNode;
     }
 
-    // TODO: commit SHA-1: fc61ae0bbb360fe3b3f8d3dd461431c67537733c :: describe the API. code is TODO.
+    // TODO: commit SHA-1: fc61ae0bbb360fe3b3f8d3dd461431c67537733c :: describe the API. 
+    // code is TODO.
     function scrollRowIntoView(row, doPaging, doCenteringY) {
       // Clip `row` to renderable range:
       // assert(row >= 0);
