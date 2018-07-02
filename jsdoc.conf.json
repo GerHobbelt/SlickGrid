@@ -1,0 +1,38 @@
+{
+    "tags": {
+        "allowUnknownTags": true,
+        "dictionaries": ["jsdoc", "closure"]
+    },
+    "source": {
+        "include": [ 
+            "slick.core.js" 
+        ],
+        "exclude": [
+        ],
+        "includePattern": ".+\\.js(doc|x)?$",
+        "excludePattern": "(^|\\/|\\\\)_"
+    },
+    "disabled_plugins": [
+        "plugins/markdown"
+    ],
+    "plugins": [
+        "plugins/containment",
+        "plugins/summarize"
+    ],
+    "templates": {
+        "cleverLinks": false,
+        "monospaceLinks": false,
+        "default": {
+            "outputSourceFiles": true
+        }
+    },
+    "opts": {
+        "template": "templates/default",
+        "encoding": "utf8",
+        "destination": "./__tmp__/",
+        "recurse": true,
+        "tutorials": "./bogus",
+        "package": "package.json",
+        "verbose": true
+    }
+}
