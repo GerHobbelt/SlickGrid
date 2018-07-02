@@ -115,7 +115,8 @@
     
     /* @const */ var _defaults = {
       buttonCssClass: null,
-      buttonImage: null               // deprecated option; use the LESS theme mixins instead (possibly in conjunction with the `buttonCssClass` option).
+      buttonImage: null,               // deprecated option; use the LESS theme mixins instead (possibly in conjunction with the `buttonCssClass` option).
+      monitorBodyEvents: true
     };
     
     var $menu;
