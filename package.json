@@ -1,5 +1,5 @@
 {
-  "name": "SlickGrid",
+  "name": "@gerhobbelt/SlickGrid",
   "version": "2.3.18-alpha.1011",
   "homepage": "https://github.com/GerHobbelt/SlickGrid",
   "author": "Michael Leibman <michael{dot}leibman{at}gmail{dot}com>",
@@ -23,10 +23,10 @@
   "dependencies": {},
   "devDependencies": {
     "assemble-less": "0.7.0",
-    "gitbook": "^2.4.3",
-    "grunt": "^0.4.5",
+    "gitbook": "2.4.3",
+    "grunt": "0.4.5",
     "grunt-autoprefixer": "3.0.3",
-    "grunt-banner": "git://github.com/GerHobbelt/grunt-banner.git#master",
+    "@gerhobbelt/grunt-banner": "0.0.1",
     "grunt-cli": "0.1.13",
     "grunt-contrib-clean": "0.6.0",
     "grunt-contrib-concat": "0.5.1",
@@ -39,16 +39,16 @@
     "grunt-contrib-watch": "0.6.1",
     "grunt-csscomb": "3.1.0",
     "grunt-jscs-checker": "0.8.1",
-    "grunt-jsdoc": "^1.0.0",
+    "grunt-jsdoc": "1.0.0",
     "grunt-rewrite": "1.0.1",
     "grunt-sed": "0.1.1",
     "grunt-version-bump": "1.0.5",
-    "jsdoc": "GerHobbelt/jsdoc",
+    "@gerhobbelt/jsdoc": "0.0.1",
     "load-grunt-tasks": "3.3.0",
-    "mocha": "*",
-    "should": "*",
+    "mocha": "0.0.1",
+    "should": "0.0.1",
     "time-grunt": "1.2.1",
-    "verb": "^0.8.10"
+    "verb": "0.8.10"
   },
   "bugs": {
     "url": "https://github.com/GerHobbelt/slick-grid/issues"
@@ -61,9 +61,10 @@
   ],
   "main": "slick.grid.js",
   "engines": {
-    "node": ">=0.10.0"
+    "node": ">=6"
   },
   "scripts": {
-    "test": "mocha"
+    "test": "mocha",
+    "pub": "npm publish --access public"
   }
 }
