@@ -73,6 +73,10 @@
 
 
 
+
+
+
+
   // register namespace
   Slick.Editors.RowMulti = RowEditor;
 
@@ -147,6 +151,10 @@
 
 
 //! Source: editors/slick.editors.002.Text.js
+
+
+
+
 
 
 
@@ -274,6 +282,10 @@
 
 
 
+
+
+
+
   // register namespace
   Slick.Editors.ReadOnly = ReadOnlyEditor;
 
@@ -365,6 +377,10 @@
 
 
 
+
+
+
+
   function applyModifier(val, mod) {
     var m = isValidModifier(mod);
     if (!m)
@@ -391,7 +407,7 @@
     var ope = sv.charAt(0);
     if ("+-*/".indexOf(ope) < 0) return false;  // no good if it does not start with an operation
     sv = sv.substr(1);    //remove first char
-    if (sv.indexOf('+') > 0 || sv.indexOf('-') > 0 || sv.indexOf('*') >= 0 || sv.indexOf('/') >= 0) return false;  // no more signs please.
+    if (sv.indexOf('+') >= 0 || sv.indexOf('-') >= 0 || sv.indexOf('*') >= 0 || sv.indexOf('/') >= 0) return false;  // no more signs please.
     var pct = false;
     if (sv.charAt(sv.length - 1) === '%') {
       pct = true;
@@ -408,6 +424,10 @@
 
 
 //! Source: editors/slick.editors.005.Integer.js
+
+
+
+
 
 
 
@@ -537,6 +557,10 @@
 
 
 //! Source: editors/slick.editors.006.Float.js
+
+
+
+
 
 
 
@@ -702,6 +726,10 @@
 
 
 
+
+
+
+
   // register namespace
   Slick.Editors.Percentage = PercentageEditor;
 
@@ -822,6 +850,10 @@
 
 
 //! Source: editors/slick.editors.008.Date.js
+
+
+
+
 
 
 
@@ -1041,6 +1073,10 @@
 
 
 
+
+
+
+
   // register namespace
   Slick.Editors.YesNoSelect = YesNoSelectEditor;
 
@@ -1120,6 +1156,10 @@
 
 
 //! Source: editors/slick.editors.010.Checkbox.js
+
+
+
+
 
 
 
@@ -1218,6 +1258,10 @@
 
 
 //! Source: editors/slick.editors.011.PercentageComplete.js
+
+
+
+
 
 
 
@@ -1390,6 +1434,10 @@
 
 
 //! Source: editors/slick.editors.012.LongText.js
+
+
+
+
 
 
 
@@ -1614,6 +1662,10 @@
 
 
 
+
+
+
+
   // register namespace
   Slick.Editors.Color = ColorEditor;
 
@@ -1737,6 +1789,10 @@
 
 
 //! Source: editors/slick.editors.014.SelectCell.js
+
+
+
+
 
 
 

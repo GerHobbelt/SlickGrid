@@ -88,9 +88,13 @@
     }
 
     function show(range) {
+      var _grid_cellsel_model = grid.getSelectionModel();
+
       if (!range) {
         range = _elem_range;
       } else {
+        _grid_cellsel_model.validateRange(range, false);
+
         // remember our input range (clone!)
         _elem_range = {
           fromRow: range.fromRow,
